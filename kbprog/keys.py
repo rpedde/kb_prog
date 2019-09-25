@@ -9,6 +9,12 @@ def label_for_keycode(keycode):
 
 
 key_to_bytes = {
+  'MO(1)': 0x5101,
+  'MO(2)': 0x5102,
+  'MO(3)': 0x5103,
+  'MO(4)': 0x5104,
+
+
   'KC_LCTL': 0x00e0,
   'KC_RCTL': 0x00e4,
   'KC_LSFT': 0x00e1,

@@ -10,6 +10,7 @@ class Keymapper(object):
         self.keyboard = keyboard
         self.logger = logging.getLogger(__name__)
         self.map = None
+        self.dirtymap = {}
 
         wiring_path = os.path.join(
             os.path.dirname(__file__),
@@ -102,12 +103,34 @@ class Keymapper(object):
         self.max_x = max_x
         self.max_y = ypos
 
+    def is_dirty(self, layer, keyinfo):
+        row, col = keyinfo['wiremap']
+        idx = '%s:%s:%s' % (layer, row, col)
+
+        if idx in self.dirtymap:
+            return True
+
+        return False
+
+    def set_key(self, layer, keyinfo, newcode):
+        row, col = keyinfo['wiremap']
+        idx = '%s:%s:%s' % (layer, row, col)
+
+        self.dirtymap[idx] = keys.key_to_bytes[newcode]
+
     def label_for_key(self, layer, keyinfo):
         if self.map is None:
             return '?'
 
         row, col = keyinfo['wiremap']
-        key = self.map[layer][row][col]
+
+        idx = '%s:%s:%s' % (layer, row, col)
+
+        if idx in self.dirtymap:
+            key = self.dirtymap[idx]
+        else:
+            key = self.map[layer][row][col]
+
         label = keys.label_for_keycode(key)
         return label
 
