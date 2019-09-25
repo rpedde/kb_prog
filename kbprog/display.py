@@ -1,3 +1,4 @@
+import logging
 import time
 
 import pygame
@@ -6,9 +7,10 @@ chooser_tabs = [
     {
         'label': 'Alphas',
         'keys': [
-            ['KC_A', 'KC_B', 'KC_C', 'KC_D', 'KC_E', 'KC_F', 'KC_G', 'KC_H', 'KC_I', 'KC_J', 'KC_K', 'KC_L', 'KC_M'],
-            ['KC_N', 'KC_O', 'KC_P', 'KC_Q', 'KC_R', 'KC_S', 'KC_T', 'KC_U', 'KC_V', 'KC_W', 'KC_X', 'KC_Y', 'KC_Z'],
-            ['KC_1', 'KC_2', 'KC_3', 'KC_4', 'KC_5', 'KC_6', 'KC_7', 'KC_8', 'KC_9', 'KC_0', None, None, None],
+            ['KC_ESC', 'KC_1', 'KC_2', 'KC_3', 'KC_4', 'KC_5', 'KC_6', 'KC_7', 'KC_8', 'KC_9', 'KC_0', 'KC_MINS', 'KC_EQL'],
+            ['KC_TAB', 'KC_Q', 'KC_W', 'KC_E', 'KC_R', 'KC_T', 'KC_Y', 'KC_U', 'KC_I', 'KC_O', 'KC_P', 'KC_LBRC', 'KC_RBRC'],
+            ['KC_CAPS', 'KC_A', 'KC_S', 'KC_D', 'KC_F', 'KC_G', 'KC_H', 'KC_J', 'KC_K', 'KC_L', 'KC_SCLN', 'KC_QUOT', 'KC_ENT'],
+            ['KC_LSFT', 'KC_Z', 'KC_X', 'KC_C', 'KC_V', 'KC_B', 'KC_N', 'KC_M', 'KC_COMM', 'KC_DOT', 'KC_SLSH', 'KC_RSFT', None],
         ]
     },
     {
@@ -17,8 +19,19 @@ chooser_tabs = [
             ['KC_ESC', 'KC_GESC', 'KC_GRAVE', None, 'KC_DEL', 'KC_INS', 'KC_BSPC', None, None, None, None, None, None],
             ['KC_N', 'KC_O', 'KC_P', 'KC_Q', 'KC_R', 'KC_S', 'KC_T', 'KC_U', 'KC_V', 'KC_W', 'KC_X', 'KC_Y', 'KC_Z'],
             ['KC_1', 'KC_2', 'KC_3', 'KC_4', 'KC_5', 'KC_6', 'KC_7', 'KC_8', 'KC_9', 'KC_0', 'KC_X', 'KC_Y', 'KC_Z'],
+            [None, None, None, None, None, None, None, None, None, None, None, None, None ],
+        ]
+    },
+    {
+        'label': 'Special',
+        'keys': [
+            ['KC_ESC', 'KC_GESC', 'KC_GRAVE', None, 'KC_DEL', 'KC_INS', 'KC_BSPC', None, None, None, None, None, None],
+            ['KC_N', 'KC_O', 'KC_P', 'KC_Q', 'KC_R', 'KC_S', 'KC_T', 'KC_U', 'KC_V', 'KC_W', 'KC_X', 'KC_Y', 'KC_Z'],
+            ['KC_1', 'KC_2', 'KC_3', 'KC_4', 'KC_5', 'KC_6', 'KC_7', 'KC_8', 'KC_9', 'KC_0', 'KC_X', 'KC_Y', 'KC_Z'],
+            [None, None, None, None, None, None, None, None, None, None, None, None, None ],
         ]
     }
+
 ]
 
 
@@ -32,6 +45,8 @@ class ProgramDisplay(object):
         self.screen = pygame.display.set_mode((width, height))
         self.selected_layer = 0
         self.selected_chooser = 0
+        self.selected_keymap = 0
+        self.hover_keymap = 0
 
         self._set_dims()
 
@@ -44,15 +59,25 @@ class ProgramDisplay(object):
         self.chooser_dirty = True
         self.layer_dirty = True
 
+        self.logger = logging.getLogger(__name__)
+
     def _set_dims(self):
         screen_w, screen_h = self.screen.get_size()
 
-        # 1/2 unit side padding
-        self.x_unit = screen_w // (max(self.keymap.max_x, 14) + 1)
-        self.y_unit = screen_h // self.keymap.max_y + 5
+        self.chooser_key_cols = 13
+        self.chooser_key_rows = 4
 
-        if self.y_unit > self.x_unit:
-            self.y_unit = self.x_unit
+        # 1/2 unit side padding
+        self.x_unit = screen_w // (max(
+            self.keymap.max_x + 1,
+            self.chooser_key_cols + 1))
+        self.y_unit = screen_h // self.keymap.max_y + (
+            self.chooser_key_rows + 3)  # three 1u menus, plus key rows
+
+        self.y_unit = min(self.y_unit, self.x_unit)
+        self.x_unit = min(self.y_unit, self.x_unit)
+        # if self.y_unit > self.x_unit:
+        #     self.y_unit = self.x_unit
 
         self.screen_w = screen_w
         self.screen_h = screen_h
@@ -79,6 +104,24 @@ class ProgramDisplay(object):
         self.chooser_r = pygame.Rect(0, self.y_unit * (self.keymap.max_y + 1),
                                      screen_w, self.y_unit * 4)
         self.chooser_surface = self.screen.subsurface(self.chooser_r)
+
+        # chooser tab
+        self.chooser_tab_r = pygame.Rect(
+            0, self.chooser_r.y + (0.25 * self.y_unit),
+            screen_w,
+            0.5 * self.y_unit)
+
+        self.chooser_tab_surface = self.screen.subsurface(self.chooser_tab_r)
+
+        # chooser_keys
+        key_width = self.chooser_key_cols * self.x_unit
+        key_ofs = (screen_w - key_width) // 2
+
+        self.chooser_key_r = pygame.Rect(
+            key_ofs, self.y_unit + self.chooser_r.y,
+            key_width, self.y_unit * self.chooser_key_rows)
+
+        self.chooser_key_surface = self.screen.subsurface(self.chooser_key_r)
 
     def start_progress(self):
         self.progress = 0
@@ -157,16 +200,15 @@ class ProgramDisplay(object):
 
         self.chooser_dirty = False
 
+        self.logger.debug('starting chooser update')
+
         screen = self.chooser_surface
         screen_w, screen_h = screen.get_size()
-
-        tab_screen = screen.subsurface(pygame.Rect(
-            0, 0.25 * self.y_unit,
-            screen_w, 0.5 * self.y_unit))
 
         tab_width = screen_w // len(chooser_tabs)
         tab_height = 0.5 * self.y_unit
 
+        tab_screen = self.chooser_tab_surface
         tab_screen.fill(pygame.Color('Black'))
 
         for idx, tab in enumerate(chooser_tabs):
@@ -189,14 +231,7 @@ class ProgramDisplay(object):
             ypos = l_rect.y + (l_rect.h // 2) - (label.get_height() // 2)
             tab_screen.blit(label, (xpos, ypos))
 
-        key_width = 13 * self.x_unit
-        key_ofs = (screen_w - key_width) // 2
-
-        key_rect = pygame.Rect(
-            key_ofs, self.y_unit,
-            key_width, self.y_unit * 3)
-
-        key_screen = screen.subsurface(key_rect)
+        key_screen = self.chooser_key_surface
 
         keys = chooser_tabs[self.selected_chooser]['keys']
         for row in range(len(keys)):
@@ -205,12 +240,17 @@ class ProgramDisplay(object):
                     (self.x_unit * col) + 1, (self.y_unit * row) + 1,
                     self.x_unit - 2, self.y_unit - 2)
 
-                pygame.draw.rect(key_screen,
-                                 pygame.Color('gray29'), keyrect, 0)
-                pygame.draw.rect(key_screen,
-                                 pygame.Color('white'), keyrect, 1)
+                key_color = pygame.Color('gray29')
 
                 label_txt = keys[row][col]
+                if label_txt == self.hover_keymap:
+                    key_color = pygame.Color('green')
+                if label_txt == self.selected_keymap:
+                    key_color = pygame.Color('red')
+
+                pygame.draw.rect(key_screen, key_color, keyrect, 0)
+                pygame.draw.rect(key_screen,
+                                 pygame.Color('white'), keyrect, 1)
 
                 if label_txt:
                     label = self.get_label_text(label_txt)
@@ -218,6 +258,7 @@ class ProgramDisplay(object):
                     ypos = keyrect.y + (keyrect.h // 2) - (label.get_height() // 2)
                     key_screen.blit(label, (xpos, ypos))
 
+        self.logger.debug('chooser update complete')
         return True
 
     def layer_update(self):
@@ -225,6 +266,8 @@ class ProgramDisplay(object):
             return False
 
         self.layer_dirty = False
+
+        self.logger.debug('starting layer update')
 
         screen = self.layer_surface
         screen_w, screen_h = screen.get_size()
@@ -253,7 +296,33 @@ class ProgramDisplay(object):
             ypos = l_rect.y + (l_rect.h // 2) - (label.get_height() // 2)
             screen.blit(label, (xpos, ypos))
 
+        self.logger.debug('layer update complete')
         return True
+
+    def on_chooser_key_move(self, pos):
+        col = (pos[0] - self.chooser_key_r.x) // self.x_unit
+        row = (pos[1] - self.chooser_key_r.y) // self.y_unit
+
+        keys = chooser_tabs[self.selected_chooser]['keys']
+
+        if keys[row][col] is not None:
+            self.hover_keymap = keys[row][col]
+        else:
+            self.hover_keymap = 0
+
+        self.chooser_dirty = True
+
+    def on_chooser_tab_mousedown(self, pos):
+        screen = self.chooser_tab_surface
+        screen_w, screen_h = screen.get_size()
+
+        button_width = screen_w // len(chooser_tabs)
+
+        which_button = int(pos[0] // button_width)
+
+        self.logger.debug('chooser invalidated')
+        self.selected_chooser = which_button
+        self.chooser_dirty = True
 
     def on_layer_mousedown(self, pos):
         screen = self.layer_surface
@@ -263,6 +332,7 @@ class ProgramDisplay(object):
 
         which_layer = int(pos[0] // button_width)
 
+        self.logger.debug('layer invalidated')
         self.selected_layer = which_layer
         self.layer_dirty = True
         self.kb_dirty = True
@@ -272,6 +342,8 @@ class ProgramDisplay(object):
             return False
 
         self.kb_dirty = False
+
+        self.logger.debug('starting kb update')
 
         x_unit = self.x_unit
         y_unit = self.y_unit
@@ -293,6 +365,8 @@ class ProgramDisplay(object):
                 xpos = keyrect.x + (keyrect.w // 2) - (label.get_width() // 2)
                 ypos = keyrect.y + (keyrect.h // 2) - (label.get_height() // 2)
                 screen.blit(label, (xpos, ypos))
+
+        self.logger.debug('kb update complete')
         return True
 
     def run(self):
@@ -320,16 +394,24 @@ class ProgramDisplay(object):
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         done = True
+                elif event.type == pygame.MOUSEMOTION:
+                    if self.chooser_key_r.collidepoint(event.pos):
+                        self.on_chooser_key_move(event.pos)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
                         if self.layer_r.collidepoint(event.pos):
                             self.on_layer_mousedown(event.pos)
+                        elif self.chooser_tab_r.collidepoint(event.pos):
+                            self.on_chooser_tab_mousedown(event.pos)
 
                 event = pygame.event.poll()
 
-            if self.layer_update() or \
-               self.kb_update() or \
-               self.chooser_update():
+            refresh = False
+            refresh |= self.layer_update()
+            refresh |= self.chooser_update()
+            refresh |= self.kb_update()
+
+            if refresh:
                 pygame.display.update()
 
             time.sleep(0.1)

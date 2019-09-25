@@ -49,10 +49,10 @@ def do_edit(kb, layout):
 def main(rawargs):
     args = get_parser().parse_args(rawargs)
 
-    fmt = '%(name)s %(levelname)s %(message)s' if args.debug else '%(message)s'
+    fmt = '[%(asctime)s.%(msecs)03d] %(levelname)s [%(name)s:%(lineno)d] %(message)s'
     level = logging.DEBUG if args.debug else logging.INFO
 
-    logging.basicConfig(format=fmt, level=level)
+    logging.basicConfig(format=fmt, level=level, datefmt='%Y-%m-%dT%H:%M:%S')
 
     results = discover.discover(match=args.match)
 

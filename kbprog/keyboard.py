@@ -80,6 +80,7 @@ class Keyboard(object):
         self.logger = logging.getLogger(__name__)
 
         self.find_endpoint()
+        self._layers = None
 
         if self.device.is_kernel_driver_active(self.interface):
             self.device.detach_kernel_driver(self.interface)
@@ -114,10 +115,12 @@ class Keyboard(object):
 
     @property
     def layers(self):
-        if self.protocol == 7:
-            return 3
-        result = self._send_command(self.DYNAMIC_KEYMAP_GET_LAYER_COUNT)
-        return result[1]
+        if self._layers is None:
+            if self.protocol == 7:
+                self._layers = 3
+            result = self._send_command(self.DYNAMIC_KEYMAP_GET_LAYER_COUNT)
+            self._layers = result[1]
+        return self._layers
 
     def keyboard_map(self, callback=None):
         items = []
