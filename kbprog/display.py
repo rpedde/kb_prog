@@ -28,16 +28,35 @@ chooser_tabs = [
         ]
     },
     {
+        'label': 'Numpad',
+        'keys': [
+            ['KC_NLCK', 'KC_PSLS', 'KC_PAST', 'KC_PMNS', None, None, None, None, None, None, None, None, None, None ],
+            ['KC_P7', 'KC_P8', 'KC_P9', 'KC_PPLS', None, None, None, None, None, None, None, None, None, None ],
+            ['KC_P4', 'KC_P5', 'KC_P6', None, None, None, None, None, None, None, None, None, None ],
+            ['KC_P1', 'KC_P2', 'KC_P3', 'KC_PENT', None, None, None, None, None, None, None, None, None, None ],
+            ['KC_P0', 'KC_PDOT', 'KC_PCMM', None, None, None, None, None, None, None, None, None, None, None ],
+        ]
+    },
+    {
         'label': 'Special',
         'keys': [
-            ['MO(1)', 'MO(2)', 'MO(3)', 'MO(4)', 'KC_DEL', 'KC_INS', 'KC_BSPC', None, None, None, None, None, None, None],
-            ['KC_N', 'KC_O', 'KC_P', 'KC_Q', 'KC_R', 'KC_S', 'KC_T', 'KC_U', 'KC_V', 'KC_W', 'KC_X', 'KC_Y', 'KC_Z', None],
-            ['KC_1', 'KC_2', 'KC_3', 'KC_4', 'KC_5', 'KC_6', 'KC_7', 'KC_8', 'KC_9', 'KC_0', 'KC_X', 'KC_Y', 'KC_Z', None],
+            ['MO(1)', 'MO(2)', 'MO(3)', 'MO(4)', 'FN_MO13', 'FN_MO23', None, 'KC_GRV', 'KC_GESC', None, None, None, 'KC_TRNS', 'KC_NO'],
+            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
+            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
+            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
+            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
+        ]
+    },
+    {
+        'label': 'Media/BL',
+        'keys': [
+            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
+            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
+            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
             [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
             [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
         ]
     }
-
 ]
 
 for item in chooser_tabs:
@@ -73,8 +92,19 @@ class ProgramDisplay(object):
         self.chooser_dirty = True
         self.layer_dirty = True
         self.program_dirty = False
+        self.action_dirty = True
 
         self.logger = logging.getLogger(__name__)
+
+        self.action_tabs = [
+            {'label': 'program',
+             'type': 'action',
+             'enabled': False,
+             'action': self.program},
+            {'label': 'labels',
+             'type': 'value',
+             'value': False}
+        ]
 
     def _set_dims(self):
         screen_w, screen_h = self.screen.get_size()
@@ -86,11 +116,12 @@ class ProgramDisplay(object):
         self.x_unit = screen_w // (max(
             self.keymap.max_x + 1,
             self.chooser_key_cols + 1))
-        self.y_unit = screen_h // self.keymap.max_y + (
-            self.chooser_key_rows + 3)  # three 1u menus, plus key rows
+        self.y_unit = screen_h // (    # three 1u menus, plus key rows
+            self.keymap.max_y + self.chooser_key_rows + 3)
 
         self.y_unit = min(self.y_unit, self.x_unit)
-        self.x_unit = min(self.y_unit, self.x_unit)
+        self.x_unit = self.y_unit
+
         # if self.y_unit > self.x_unit:
         #     self.y_unit = self.x_unit
 
@@ -138,6 +169,13 @@ class ProgramDisplay(object):
 
         self.chooser_key_surface = self.screen.subsurface(self.chooser_key_r)
 
+        # action tab
+        self.action_tab_r = pygame.Rect(
+            0, self.screen_h - (self.y_unit * 0.75),
+            self.screen_w, self.y_unit * 0.5)
+
+        self.action_tab_surface = self.screen.subsurface(self.action_tab_r)
+
     def start_progress(self):
         self.progress = 0
         self.in_progress = True
@@ -163,6 +201,17 @@ class ProgramDisplay(object):
             time.sleep(0.1)
             self.progress_update()
             pygame.display.update()
+
+    def program(self):
+        pygame.display.set_caption('Programming "%s"' % self.keymap.name)
+
+        self.keymap.program(self.update_progress)
+        self.action_tabs[0]['enabled'] = False
+
+        pygame.display.set_caption('Editing "%s"' % self.keymap.name)
+
+        self.kb_dirty = True
+        self.action_dirty = True
 
     def get_font(self):
         available = pygame.font.get_fonts()
@@ -249,32 +298,92 @@ class ProgramDisplay(object):
         key_screen = self.chooser_key_surface
         key_screen.fill(pygame.Color('Black'))
 
-        keys = chooser_tabs[self.selected_chooser]['keys']
-        for row in range(len(keys)):
-            for col in range(len(keys[row])):
+        c_keys = chooser_tabs[self.selected_chooser]['keys']
+        for row in range(len(c_keys)):
+            for col in range(len(c_keys[row])):
                 keyrect = pygame.Rect(
                     (self.x_unit * col) + 1, (self.y_unit * row) + 1,
                     self.x_unit - 2, self.y_unit - 2)
 
                 key_color = pygame.Color('gray29')
 
-                label_txt = keys[row][col]
+                label_txt = c_keys[row][col]
+                font_color = pygame.Color('white')
                 if label_txt is not None:
                     if label_txt == self.hover_keymap:
                         key_color = pygame.Color('green')
+                        font_color = pygame.Color('black')
                     if label_txt == self.selected_keymap:
                         key_color = pygame.Color('red')
+                        font_color = pygame.Color('black')
 
                     pygame.draw.rect(key_screen, key_color, keyrect, 0)
                     pygame.draw.rect(key_screen,
                                      pygame.Color('white'), keyrect, 1)
 
-                    label = self.get_label_text(label_txt)
-                    xpos = keyrect.x + (keyrect.w // 2) - (label.get_width() // 2)
-                    ypos = keyrect.y + (keyrect.h // 2) - (label.get_height() // 2)
-                    key_screen.blit(label, (xpos, ypos))
+                    if self.action_tabs[1]['value']:
+                        labs = list(keys.key_to_labels[label_txt])
+                        if all(x == '' for x in labs):
+                            labs[1] = label_txt
+
+                        for idx, label_txt in enumerate(labs):
+                            if label_txt != '':
+                                label = self.get_label_text(label_txt, color=font_color)
+                                xpos = keyrect.x + 4
+                                yofs = label.get_height() // 2
+                                ypos = keyrect.y + (idx * (self.y_unit // 4)) + yofs
+                                key_screen.blit(label, (xpos, ypos))
+                    else:
+                        label = self.get_label_text(label_txt, color=font_color)
+                        xpos = keyrect.x + (keyrect.w // 2) - (label.get_width() // 2)
+                        ypos = keyrect.y + (keyrect.h // 2) - (label.get_height() // 2)
+                        key_screen.blit(label, (xpos, ypos))
 
         self.logger.debug('chooser update complete')
+        return True
+
+    def action_update(self):
+        if not self.action_dirty:
+            return False
+
+        self.logger.debug('starting action update')
+
+        self.action_dirty = True
+
+        screen = self.action_tab_surface
+        screen_w, screen_h = screen.get_size()
+
+        button_width = screen_w // len(self.action_tabs)
+
+        screen.fill(pygame.Color('Black'))
+
+        for idx, button in enumerate(self.action_tabs):
+            bgcolor = pygame.Color('black')
+            fgcolor = pygame.Color('white')
+
+            if button.get('type', 'value') == 'value':
+                # controlled by bool in "value"
+                if button.get('value'):
+                    bgcolor = pygame.Color('white')
+                    fgcolor = pygame.Color('black')
+            elif button.get('enabled', True) is False:
+                fgcolor = pygame.Color('gray29')
+
+            b_rect = pygame.Rect(
+                button_width * idx, 0,
+                button_width, screen_h)
+
+            pygame.draw.rect(screen, bgcolor, b_rect, 0)
+            pygame.draw.rect(screen, fgcolor, b_rect, 1)
+
+            label = self.get_label_text(
+                button.get('label', '?'), color=fgcolor)
+
+            xpos = b_rect.x + (b_rect.w // 2) - (label.get_width() // 2)
+            ypos = b_rect.y + (b_rect.h // 2) - (label.get_height() // 2)
+            screen.blit(label, (xpos, ypos))
+
+        self.logger.debug('action update complete')
         return True
 
     def layer_update(self):
@@ -330,6 +439,7 @@ class ProgramDisplay(object):
                 if item['keyrect'].collidepoint(corrected_pos):
                     self.keymap.set_key(
                         self.selected_layer, item, self.selected_keymap)
+                    self.action_tabs[0]['enabled'] = True
 
         self.selected_keymap = 0
         self.hover_keymap = 0
@@ -337,6 +447,7 @@ class ProgramDisplay(object):
 
         self.chooser_dirty = True
         self.kb_dirty = True
+        self.action_dirty = True
 
     def on_chooser_key_move(self, pos):
         col = (pos[0] - self.chooser_key_r.x) // self.x_unit
@@ -354,6 +465,26 @@ class ProgramDisplay(object):
             self.hover_keymap = 0
 
         self.chooser_dirty = True
+
+    def on_action_tab_mousedown(self, pos):
+        screen = self.action_tab_surface
+        screen_w, screen_h = screen.get_size()
+
+        button_width = screen_w // len(self.action_tabs)
+
+        which_button = int(pos[0] // button_width)
+
+        b_info = self.action_tabs[which_button]
+
+        b_type = b_info.get('type', 'value')
+
+        if b_type == 'value':
+            b_info['value'] = not b_info['value']
+            self.action_dirty = True
+            self.kb_dirty = True
+            self.chooser_dirty = True
+        elif b_type == 'action' and b_info.get('enabled', True):
+            b_info['action']()
 
     def on_chooser_tab_mousedown(self, pos):
         screen = self.chooser_tab_surface
@@ -421,12 +552,24 @@ class ProgramDisplay(object):
             pygame.draw.rect(screen, pygame.Color('white'), keyrect, 1)
 
             label_txt = self.keymap.label_for_key(self.selected_layer, item)
+            if self.action_tabs[1]['value']:
+                labs = list(keys.key_to_labels[label_txt])
+                if all(x == '' for x in labs):
+                    labs[1] = label_txt
 
-            if label_txt:
-                label = self.get_label_text(label_txt)
-                xpos = keyrect.x + (keyrect.w // 2) - (label.get_width() // 2)
-                ypos = keyrect.y + (keyrect.h // 2) - (label.get_height() // 2)
-                screen.blit(label, (xpos, ypos))
+                for idx, label_txt in enumerate(labs):
+                    if label_txt != '':
+                        label = self.get_label_text(label_txt)
+                        xpos = keyrect.x + 4
+                        yofs = label.get_height() // 2
+                        ypos = keyrect.y + (idx * (self.y_unit // 4)) + yofs
+                        screen.blit(label, (xpos, ypos))
+            else:
+                if label_txt:
+                    label = self.get_label_text(label_txt)
+                    xpos = keyrect.x + (keyrect.w // 2) - (label.get_width() // 2)
+                    ypos = keyrect.y + (keyrect.h // 2) - (label.get_height() // 2)
+                    screen.blit(label, (xpos, ypos))
 
         self.logger.debug('kb update complete')
         return True
@@ -445,7 +588,7 @@ class ProgramDisplay(object):
         self.end_progress()
         self.kb_dirty = True
 
-        pygame.display.set_caption('Programming "%s"' % self.keymap.name)
+        pygame.display.set_caption('Editing "%s"' % self.keymap.name)
 
         done = False
         while not done:
@@ -482,6 +625,8 @@ class ProgramDisplay(object):
                         elif self.chooser_key_r.collidepoint(event.pos):
                             self.selected_keymap = self.hover_keymap
                             self.chooser_dirty = True
+                        elif self.action_tab_r.collidepoint(event.pos):
+                            self.on_action_tab_mousedown(event.pos)
 
                 event = pygame.event.poll()
 
@@ -489,6 +634,7 @@ class ProgramDisplay(object):
             refresh |= self.layer_update()
             refresh |= self.chooser_update()
             refresh |= self.kb_update()
+            refresh |= self.action_update()
 
             if refresh:
                 pygame.display.update()

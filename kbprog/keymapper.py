@@ -103,6 +103,21 @@ class Keymapper(object):
         self.max_x = max_x
         self.max_y = ypos
 
+    def program(self, callback=None):
+        total_items = len(self.dirtymap)
+        programmed = 0
+
+        for item, value in self.dirtymap.items():
+            layer, row, col = map(int, item.split(':'))
+            self.keyboard.set_key(layer, row, col, value)
+            self.map[layer][row][col] = value
+            programmed += 1
+            if callback:
+                percent = programmed / total_items
+                callback(percent)
+
+        self.dirtymap = {}
+
     def is_dirty(self, layer, keyinfo):
         row, col = keyinfo['wiremap']
         idx = '%s:%s:%s' % (layer, row, col)

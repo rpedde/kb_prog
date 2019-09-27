@@ -122,6 +122,11 @@ class Keyboard(object):
             self._layers = result[1]
         return self._layers
 
+    def set_key(self, layer, row, col, value):
+        self._send_command(
+            self.DYNAMIC_KEYMAP_SET_KEYCODE,
+            layer, row, col, (value & 0xFF00) >> 8, value & 0xFF)
+
     def keyboard_map(self, callback=None):
         items = []
 
