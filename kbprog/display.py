@@ -8,7 +8,7 @@ from kbprog import keys
 
 chooser_tabs = [
     {
-        'label': 'Alphas',
+        'label': '60%',
         'keys': [
             ['KC_ESC', 'KC_1', 'KC_2', 'KC_3', 'KC_4', 'KC_5', 'KC_6', 'KC_7', 'KC_8', 'KC_9', 'KC_0', 'KC_MINS', 'KC_EQL', 'KC_BSPC'],
             ['KC_TAB', 'KC_Q', 'KC_W', 'KC_E', 'KC_R', 'KC_T', 'KC_Y', 'KC_U', 'KC_I', 'KC_O', 'KC_P', 'KC_LBRC', 'KC_RBRC', 'KC_BSLS'],
@@ -18,7 +18,7 @@ chooser_tabs = [
         ]
     },
     {
-        'label': 'Mods',
+        'label': 'FN/TKL',
         'keys': [
             ['KC_F1', 'KC_F2', 'KC_F3', 'KC_F4', 'KC_F5', 'KC_F6', 'KC_F7', 'KC_F8', 'KC_F9', 'KC_F10', 'KC_F11', 'KC_F12', None, None],
             [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
@@ -41,20 +41,20 @@ chooser_tabs = [
         'label': 'Special',
         'keys': [
             ['MO(1)', 'MO(2)', 'MO(3)', 'MO(4)', 'FN_MO13', 'FN_MO23', None, 'KC_GRV', 'KC_GESC', None, None, None, 'KC_TRNS', 'KC_NO'],
+            [None, None, None, None, None, None, None, None, None, None, None, None, 'DEBUG', 'RESET' ],
             [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
-            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
-            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
-            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
+            ['BR_INC', 'EF_INC', 'ES_INC', 'H1_INC', 'S1_INC', 'H2_INC', 'S2_INC', None, None, None, None, None, None, None ],
+            ['BR_DEC', 'EF_DEC', 'ES_DEC', 'H1_DEC', 'S1_DEC', 'H2_DEC', 'S2_DEC', None, None, None, None, None, None, None ],
         ]
     },
     {
         'label': 'Media/BL',
         'keys': [
-            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
-            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
-            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
-            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
-            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
+            ['KC_MPRV', 'KC_MSTP', 'KC_MNXT', None, 'KC_MUTE', 'KC_VOLU', 'KC_VOLD', None, 'BL_OFF', 'BL_ON', 'BL_TOGG', None, None, None ],
+            ['KC_MRWD', 'KC_MPLY', 'KC_MFFD', None, None, None, None, None, 'BL_DEC', 'BL_INC', 'BL_STEP', 'BL_BRTG', None, None ],
+            [None, 'KC_MSEL', 'KC_EJCT', None, 'RGB_TOG', 'RGB_MOD', 'RGB_RMOD', None, None, None, None, None, None, None ],
+            [None, None, None, None, 'RGB_HUI', 'RGB_HUD', 'RGB_SAI', 'RGB_SAD', 'RGB_VAI', 'RGB_VAD', 'RGB_SPI', 'RGB_SPD', None, None ],
+            [None, None, None, None, 'RGB_M_P', 'RGB_M_B', 'RGB_M_R', 'RGB_M_SW', 'RGB_M_SN', 'RGB_M_K', 'RGB_M_X', 'RGB_M_G', None, None ],
         ]
     }
 ]
@@ -103,7 +103,7 @@ class ProgramDisplay(object):
              'action': self.program},
             {'label': 'labels',
              'type': 'value',
-             'value': False}
+             'value': True}
         ]
 
     def _set_dims(self):
