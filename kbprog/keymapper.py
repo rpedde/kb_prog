@@ -59,6 +59,7 @@ class Keymapper(object):
         for row in self.layout:
             xpos = 0
             next_w = 1
+            next_h = 1
             col = 0
 
             for item in row:
@@ -67,9 +68,11 @@ class Keymapper(object):
                         next_w = item['w']
                     if 'x' in item:
                         xpos += item['x']
+                    if 'h' in item:
+                        next_h = item['h']
                 else:
                     w = next_w
-                    h = 1
+                    h = next_h
                     labels = item.split('\n')
                     if len(labels) == 1:
                         label = labels[0]

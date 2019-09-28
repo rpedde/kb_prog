@@ -70,7 +70,7 @@ class Keyboard(object):
         1: 'wilba'
     }
 
-    def __init__(self, device, name, tag, rows, cols):
+    def __init__(self, device, name, tag, rows, cols, **kwargs):
         self.name = name
         self.tag = tag
         self.rows = rows

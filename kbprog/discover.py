@@ -18,7 +18,26 @@ devices = {
         'tag': 'koyu',
         'rows': 5,
         'cols': 15
+    },
+    '1209:6060:v6801': {
+        'name': 'Pedde Heavy Industries r68/rev1',
+        'tag': 'r68rev1',
+        'rows': 5,
+        'cols': 15
+    },
+    '1209:6060:v1701': {
+        'name': 'Pedde Heavy Industries r17/rev1',
+        'tag': 'r17rev1',
+        'rows': 5,
+        'cols': 4
+    },
+    '1209:6060:v6001': {
+        'name': 'Pedde Heavy Industries r60/rev1',
+        'tag': 'r60rev1',
+        'rows': 5,
+        'cols': 14
     }
+
 }
 
 
@@ -28,16 +47,25 @@ def discover(match=None):
 
     for device in devs:
         did = '%04x:%04x' % (device.idVendor, device.idProduct)
+        did_ver = '%04x:%04x:v%04x' % (device.idVendor,
+                                       device.idProduct,
+                                       device.bcdDevice)
 
-        if did in devices:
+        device_info = devices.get(did_ver, devices.get(did))
+
+        if device_info is not None:
+            if 'discover_version' in device_info:
+                if device.bcdDevice != device_info['discover_version']:
+                    continue
+
             add = True
             if match is not None:
-                if match not in devices[did]['name'] and \
-                   match not in devices[did]['tag']:
+                if match not in device_info['name'] and \
+                   match not in device_info['tag']:
                     add = False
 
             if add:
-                struct = devices[did]
+                struct = device_info
                 struct['device'] = device
                 struct['id'] = did
 

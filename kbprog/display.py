@@ -42,9 +42,9 @@ chooser_tabs = [
         'keys': [
             ['MO(1)', 'MO(2)', 'MO(3)', 'MO(4)', 'FN_MO13', 'FN_MO23', None, 'KC_GRV', 'KC_GESC', None, None, None, 'KC_TRNS', 'KC_NO'],
             [None, None, None, None, None, None, None, None, None, None, None, None, 'DEBUG', 'RESET' ],
-            [None, None, None, None, None, None, None, None, None, None, None, None, None, None ],
-            ['BR_INC', 'EF_INC', 'ES_INC', 'H1_INC', 'S1_INC', 'H2_INC', 'S2_INC', None, None, None, None, None, None, None ],
-            ['BR_DEC', 'EF_DEC', 'ES_DEC', 'H1_DEC', 'S1_DEC', 'H2_DEC', 'S2_DEC', None, None, None, None, None, None, None ],
+            [None, None, None, None, None, None, None, None,                             None, 'MW_UP', None, None, 'MS_UP', None ],
+            ['BR_INC', 'EF_INC', 'ES_INC', 'H1_INC', 'S1_INC', 'H2_INC', 'S2_INC', None, 'MW_LEFT', 'MW_DOWN', 'MW_RIGHT', 'MS_LEFT', 'MS_DOWN', 'MS_RIGHT' ],
+            ['BR_DEC', 'EF_DEC', 'ES_DEC', 'H1_DEC', 'S1_DEC', 'H2_DEC', 'S2_DEC', None, None, 'MS_BTN1', 'MS_BTN2', 'MS_BTN3', 'MS_BTN4', 'MS_BTN5'],
         ]
     },
     {
@@ -553,7 +553,7 @@ class ProgramDisplay(object):
 
             label_txt = self.keymap.label_for_key(self.selected_layer, item)
             if self.action_tabs[1]['value']:
-                labs = list(keys.key_to_labels[label_txt])
+                labs = list(keys.key_to_labels.get(label_txt, ('', label_txt, '')))
                 if all(x == '' for x in labs):
                     labs[1] = label_txt
 
