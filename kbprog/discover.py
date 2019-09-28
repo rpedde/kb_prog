@@ -36,8 +36,13 @@ devices = {
         'tag': 'r60rev1',
         'rows': 5,
         'cols': 14
+    },
+    '1209:6060:v6004': {
+        'name': 'Pedde Heavy Industries r60/rev4',
+        'tag': 'r60rev4',
+        'rows': 5,
+        'cols': 14
     }
-
 }
 
 
