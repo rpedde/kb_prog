@@ -81,6 +81,9 @@ class Keyboard(object):
 
         self.find_endpoint()
         self._layers = None
+        self._macro_buffer_size = None
+        self._macro_count = None
+        self.macros = []
 
         if self.device.is_kernel_driver_active(self.interface):
             self.device.detach_kernel_driver(self.interface)
@@ -93,6 +96,7 @@ class Keyboard(object):
                               str(e))
 
         self.protocol = self.get_protocol()
+        self._load_macros()
 
     def dump(self):
         self.logger.info('Name: %s', self.name)
@@ -102,6 +106,11 @@ class Keyboard(object):
                                       'Unknown: %d' % self.protocol)
         self.logger.info('Protocol: %s', protocol)
         self.logger.info('Layers: %s', self.layers)
+        self.logger.info('Macros: %s', self.macro_count)
+        if self.macro_count:
+            self.logger.info('Macro buffer size: %s', self.macro_bytes)
+            for idx, macro in enumerate(self.macros):
+                self.logger.info('Macro %d: %s', idx, macro)
 
     def get_protocol(self):
         result = self._send_command(self.GET_PROTOCOL_VERSION)
@@ -122,12 +131,150 @@ class Keyboard(object):
             self._layers = result[1]
         return self._layers
 
+    @property
+    def macro_bytes(self):
+        if self.protocol == 7:
+            self._macro_buffer_size = 0
+        else:
+            result = self._send_command(
+                self.DYNAMIC_KEYMAP_MACRO_GET_BUFFER_SIZE)
+            self._macro_buffer_size = result[1] << 8 | result[2]
+        return self._macro_buffer_size
+
+    @property
+    def macro_count(self):
+        if self.protocol == 7:
+            self._macro_count = 0
+        else:
+            result = self._send_command(self.DYNAMIC_KEYMAP_MACRO_GET_COUNT)
+            self._macro_count = result[1]
+        return self._macro_count
+
+    def set_macro(self, index, value):
+        if index > self.macro_count:
+            raise RuntimeError('Macro %d out of range' % index)
+
+        value = bytes(value, 'latin1').decode('unicode_escape')
+        self.macros[index] = value
+
+    def _load_macros(self):
+        macro_bytes = self.macro_bytes
+        if not macro_bytes:
+            return
+
+        buffer = bytearray()
+        left_to_read = macro_bytes
+        offset = 0
+
+        while(left_to_read):
+            to_read = min(left_to_read, 28)
+            next = self._send_command(
+                self.DYNAMIC_KEYMAP_MACRO_GET_BUFFER,
+                (offset & 0xFF00) >> 8,
+                offset & 0xFF,
+                to_read & 0xFF)
+
+            data = next[4:4+to_read]
+            buffer += data
+            left_to_read -= to_read
+            offset += to_read
+
+        macro = 0
+        current_macro = bytearray()
+        offset = 0
+
+        while(macro < self.macro_count):
+            if buffer[offset] != 0:
+                current_macro.append(buffer[offset])
+            else:
+                self.logger.debug('Macro %d: %s', macro, current_macro)
+                self.macros.append(current_macro.decode('latin1'))
+                current_macro = bytearray()
+                macro += 1
+
+            offset += 1
+
+    def save_macros(self):
+        macro_bytes = self.macro_bytes
+        if not macro_bytes:
+            return
+
+        buffer = bytearray()
+        for macro in range(self.macro_count):
+            buffer += bytearray(self.macros[macro].encode('latin1'))
+            buffer.append(0)
+
+        if len(buffer) > self.macro_bytes:
+            raise RuntimeError('macro too large')
+
+        left_to_write = len(buffer)
+        offset = 0
+
+        while(left_to_write):
+            to_write = min(left_to_write, 28)
+            self._send_command(
+                self.DYNAMIC_KEYMAP_MACRO_SET_BUFFER,
+                (offset & 0xFF00) >> 8,
+                offset & 0xFF,
+                to_write & 0xFF,
+                buffer[offset:offset+to_write])
+
+            left_to_write -= to_write
+            offset += to_write
+
     def set_key(self, layer, row, col, value):
         self._send_command(
             self.DYNAMIC_KEYMAP_SET_KEYCODE,
             layer, row, col, (value & 0xFF00) >> 8, value & 0xFF)
 
+    def keyboard_map_beta(self, callback=None):
+        buffer = bytearray()
+
+        buffer_size = self.layers * self.rows * self.cols * 2
+        left_to_read = buffer_size
+        offset = 0
+
+        while(left_to_read):
+            to_read = min(left_to_read, 28)
+            next = self._send_command(
+                self.DYNAMIC_KEYMAP_GET_BUFFER,
+                (offset & 0xFF00) >> 8,
+                offset & 0xFF,
+                to_read & 0xFF)
+
+            data = next[4:4+to_read]
+            buffer += data
+            left_to_read -= to_read
+            offset += to_read
+
+            if callback is not None:
+                read = buffer_size - left_to_read
+                percent = float(read) / float(buffer_size)
+                callback(percent)
+
+        self.logger.debug('Map: %s bytes (expected %s): %s',
+                          len(buffer),
+                          self.layers * self.rows * self.cols * 2,
+                          ' '.join('%02x' % x for x in buffer))
+
+        # now, split it out
+        items = []
+        pos = 0
+        for layer in range(self.layers):
+            items.append([])
+            for row in range(self.rows):
+                items[layer].append([])
+                for col in range(self.cols):
+                    items[layer][row].append(
+                        buffer[pos] << 8 | buffer[pos+1])
+                    pos += 2
+
+        return items
+
     def keyboard_map(self, callback=None):
+        if self.protocol > 7:  # beta or better
+            return self.keyboard_map_beta(callback=callback)
+
         items = []
 
         total_items = self.layers * self.rows * self.cols
@@ -165,7 +312,16 @@ class Keyboard(object):
                            self.BACKLIGHT_EFFECT, value)
 
     def _send_command(self, cmd, *args):
-        bytedata = bytearray([cmd] + list(args))
+        bytedata = bytearray([cmd])
+        for arg in args:
+            if isinstance(arg, int):
+                bytedata.append(arg)
+            elif isinstance(arg, bytearray):
+                bytedata += arg
+            elif isinstance(arg, basestring):
+                bytedata += bytearray(arg.encode('latin1'))
+            else:
+                raise RuntimeError('Bad arg: %s', arg)
 
         self.logger.debug('Send: %d bytes: %s',
                           len(bytedata),

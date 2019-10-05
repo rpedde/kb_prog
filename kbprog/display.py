@@ -28,10 +28,10 @@ chooser_tabs = [
         ]
     },
     {
-        'label': 'Numpad',
+        'label': 'Numpad/Macro',
         'keys': [
-            ['KC_NLCK', 'KC_PSLS', 'KC_PAST', 'KC_PMNS', None, None, None, None, None, None, None, None, None, None ],
-            ['KC_P7', 'KC_P8', 'KC_P9', 'KC_PPLS', None, None, None, None, None, None, None, None, None, None ],
+            ['KC_NLCK', 'KC_PSLS', 'KC_PAST', 'KC_PMNS', None, 'MACRO00', 'MACRO01', 'MACRO02', 'MACRO03', 'MACRO04', 'MACRO05', 'MACRO06', 'MACRO07', None ],
+            ['KC_P7', 'KC_P8', 'KC_P9', 'KC_PPLS', None, 'MACRO08', 'MACRO09', 'MACRO10', 'MACRO11', 'MACRO12', 'MACRO13', 'MACRO14', 'MACRO15', None ],
             ['KC_P4', 'KC_P5', 'KC_P6', None, None, None, None, None, None, None, None, None, None ],
             ['KC_P1', 'KC_P2', 'KC_P3', 'KC_PENT', None, None, None, None, None, None, None, None, None, None ],
             ['KC_P0', 'KC_PDOT', 'KC_PCMM', None, None, None, None, None, None, None, None, None, None, None ],
@@ -347,8 +347,7 @@ class ProgramDisplay(object):
             return False
 
         self.logger.debug('starting action update')
-
-        self.action_dirty = True
+        self.action_dirty = False
 
         screen = self.action_tab_surface
         screen_w, screen_h = screen.get_size()

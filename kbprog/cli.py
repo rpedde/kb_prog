@@ -34,6 +34,10 @@ def get_parser():
     effects_parser.add_argument('effect',
                                 help='what effect (next/prev/number)')
 
+    macro_parser = subparsers.add_parser('macro', help='set macros')
+    macro_parser.add_argument('index', type=int)
+    macro_parser.add_argument('value')
+
     # save_parser = led_subparsers.add_parser('save', help='save')
 
     return parser
@@ -83,6 +87,9 @@ def main(rawargs):
         do_edit(kb, args.layout)
     elif args.action == 'info':
         print(kb.dump())
+    elif args.action == 'macro':
+        kb.set_macro(args.index, args.value)
+        kb.save_macros()
     elif args.action == 'bootloader':
         kb.bootloader()
     elif args.action == 'map':
@@ -91,8 +98,7 @@ def main(rawargs):
         for layer in range(kb.layers):
             logging.info('Layer %d', layer)
             for row in range(kb.rows):
-                ofs = (layer * (kb.rows * kb.cols)) + (row * kb.cols)
-                rowdata = kmap[ofs:ofs + kb.cols]
+                rowdata = kmap[layer][row]
                 logging.info(rowdata)
 
                 pretty = ', '.join(map(keys.label_for_keycode, rowdata))
