@@ -14,6 +14,11 @@ key_to_all = {
     'MO(3)': (0x5103, '', 'Moment', 'Layer3'),
     'MO(4)': (0x5104, '', 'Moment', 'Layer4'),
 
+    'DF(0)': (0x5200, '', 'Default', 'Layer0'),
+    'DF(1)': (0x5200, '', 'Default', 'Layer1'),
+    'DF(2)': (0x5200, '', 'Default', 'Layer2'),
+    'DF(3)': (0x5200, '', 'Default', 'Layer3'),
+
     'KC_LCTL': (0x00e0, '', 'Left', 'Ctrl'),
     'KC_RCTL': (0x00e4, '', 'Right', 'Ctrl'),
     'KC_LSFT': (0x00e1, '', 'Left', 'Shift'),
