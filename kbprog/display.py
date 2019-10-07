@@ -40,7 +40,7 @@ chooser_tabs = [
     {
         'label': 'Special',
         'keys': [
-            [None, 'MO(1)', 'MO(2)', 'MO(3)', None, 'FN_MO13', 'FN_MO23', None, None, 'KC_GRV', 'KC_GESC', None, None, 'KC_TRNS', 'KC_NO'],
+            [None, 'MO(1)', 'MO(2)', 'MO(3)', None, 'FN_MO13', 'FN_MO23', None, None, 'KC_GRV', 'KC_GESC', None, 'KC_TRNS', 'KC_NO'],
             ['DF(0)', 'DF(1)', 'DF(2)', 'DF(3)', None, None, None, None, None, None, None, None, 'DEBUG', 'RESET' ],
             [None, None, None, None, None, None, None, None,                             None, 'MW_UP', None, None, 'MS_UP', None ],
             ['BR_INC', 'EF_INC', 'ES_INC', 'H1_INC', 'S1_INC', 'H2_INC', 'S2_INC', None, 'MW_LEFT', 'MW_DOWN', 'MW_RIGHT', 'MS_LEFT', 'MS_DOWN', 'MS_RIGHT' ],
