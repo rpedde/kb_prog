@@ -9,6 +9,7 @@ verify_ssl = true
 evdev = "*"
 pygame = "*"
 pyusb = "*"
+hid = "*"
 
 [requires]
 python_version = "3.7"

@@ -1,5 +1,7 @@
+
 import logging
 
+import hid
 import usb.util
 
 
@@ -70,30 +72,36 @@ class Keyboard(object):
         1: 'wilba'
     }
 
-    def __init__(self, device, name, tag, rows, cols, **kwargs):
+    def __init__(self, device, name, tag, rows, cols, use_hid, **kwargs):
         self.name = name
         self.tag = tag
         self.rows = rows
         self.cols = cols
-        self.device = device
 
         self.logger = logging.getLogger(__name__)
 
-        self.find_endpoint()
         self._layers = None
         self._macro_buffer_size = None
         self._macro_count = None
         self.macros = []
 
-        if self.device.is_kernel_driver_active(self.interface):
-            self.device.detach_kernel_driver(self.interface)
+        self.use_hid = use_hid
+        self.device = device
 
-        try:
-            usb.util.claim_interface(self.device, self.interface)
-            self.logger.info('Claimed device')
-        except Exception as e:
-            self.logger.debug('Could not claim device: %s',
-                              str(e))
+        if not self.use_hid:
+            self.find_endpoint()
+
+            if self.device.is_kernel_driver_active(self.interface):
+                self.device.detach_kernel_driver(self.interface)
+
+            try:
+                usb.util.claim_interface(self.device, self.interface)
+                self.logger.info('Claimed device')
+            except Exception as e:
+                self.logger.debug('Could not claim device: %s',
+                                  str(e))
+        else:
+            self.find_hidpath()
 
         self.protocol = self.get_protocol()
         self._load_macros()
@@ -114,7 +122,8 @@ class Keyboard(object):
 
     def get_protocol(self):
         result = self._send_command(self.GET_PROTOCOL_VERSION)
-        return (result[1] * 256) + result[2]
+        retval = (result[1] * 256) + result[2]
+        return retval
 
     def bootloader(self):
         self._send_command(self.BOOTLOADER_JUMP)
@@ -158,6 +167,9 @@ class Keyboard(object):
         self.macros[index] = value
 
     def _load_macros(self):
+        if self.macro_count == 0:
+            return
+
         macro_bytes = self.macro_bytes
         if not macro_bytes:
             return
@@ -312,6 +324,53 @@ class Keyboard(object):
                            self.BACKLIGHT_EFFECT, value)
 
     def _send_command(self, cmd, *args):
+        if self.use_hid:
+            return self._send_hid_command(cmd, *args)
+        return self._send_old_command(cmd, *args)
+
+    def _send_hid_command(self, *args):
+        bufsize = 32
+        out_buf = [0x00] * bufsize
+        ofs = 0
+
+        for item in args:
+            if isinstance(item, int):
+                out_buf[ofs] = item
+                ofs += 1
+            elif isinstance(item, str):
+                for char in item:
+                    out_buf[ofs] = ord(char)
+                    ofs += 1
+            elif isinstance(item, bytearray):
+                for char in item:
+                    out_buf[ofs] = char
+                    ofs += 1
+            else:
+                raise RuntimeError('bad cmd')
+
+        out_buf = (''.join([chr(x) for x in out_buf])).encode('latin1')
+        if len(out_buf) != 32:
+            raise RuntimeError('Buffer too big!')
+
+        self.logger.debug('Send: %d bytes: %s',
+                          len(out_buf),
+                          ' '.join('%02x' % x for x in out_buf))
+
+        retry_count = 0
+        while retry_count <= 1:
+            result = self.hid_device.write(out_buf)
+            in_buf = self.hid_device.read(32, 300)  # 1s timeout
+            if len(in_buf) != 0:
+                break
+            retry_count += 1
+            self.logger.info('Bad read... retrying...')
+
+        self.logger.debug('Recv: %s bytes: %s',
+                          len(in_buf),
+                          ' '.join('%02x' % x for x in in_buf))
+        return in_buf
+
+    def _send_old_command(self, cmd, *args):
         bytedata = bytearray([cmd])
         for arg in args:
             if isinstance(arg, int):
@@ -319,24 +378,49 @@ class Keyboard(object):
             elif isinstance(arg, bytearray):
                 bytedata += arg
             elif isinstance(arg, basestring):
-                bytedata += bytearray(arg.encode('latin1'))
+                bytedata += bytearray(arg.encode())
             else:
                 raise RuntimeError('Bad arg: %s', arg)
+
+        while len(bytedata) < 32:
+            bytedata.append(0x0)
 
         self.logger.debug('Send: %d bytes: %s',
                           len(bytedata),
                           ' '.join('%02x' % x for x in bytedata))
         self.device.write(self.out_ep, bytedata)
         result = self.device.read(self.in_ep, 32)
+
         self.logger.debug('Recv: %s bytes: %s',
                           len(result),
                           ' '.join('%02x' % x for x in result))
         return result
 
+    def find_hidpath(self):
+        self.logger.info(f'Probing for raw hid device among {self.device}')
+        for item in self.device:
+            self.hid_device = hid.Device(path=item)
+            try:
+                buf = self._send_command(self.GET_PROTOCOL_VERSION)
+                pver = buf[1] * 256 + buf[2]
+            except Exception:
+                self.logger.info(f'Timeout for {item}')
+                self.hid_device.close()
+                continue
+
+            if pver not in self.PROTOCOLS:
+                self.logger.info(f'Invalid protocol: {pver}')
+            else:
+                self.logger.info(f'Using path {item}')
+                return
+
+        raise RuntimeError('Cannot find suitable hid device')
+
     def find_endpoint(self):
         self.logger.debug('Probing for endpoint')
 
         cfg = self.device.get_active_configuration()
+
         for intf in cfg:
             self.logger.debug('Iface %s', intf.bInterfaceNumber)
 
@@ -358,4 +442,4 @@ class Keyboard(object):
                                  self.interface, self.in_ep, self.out_ep)
 
         if not self.interface:
-            raise RuntimeError('Cannot find reasonable interface')
+            raise RuntimeError('No good interface found')
