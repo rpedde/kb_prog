@@ -1,3 +1,4 @@
+import hid
 import usb.core
 
 devices = {
@@ -42,11 +43,68 @@ devices = {
         'tag': 'r60rev4',
         'rows': 5,
         'cols': 14
+    },
+    '1209:6060:v6501': {
+        'name': 'TX-65',
+        'tag': 'tx65',
+        'rows': 5,
+        'cols': 16
+    },
+    '5053:434e': {
+        'name': 'Percent Canoe',
+        'tag': 'canoe',
+        'rows': 5,
+        'cols': 15
+    },
+    'feed:6050': {
+        'name': 'TX-65',
+        'tag': 'tx65',
+        'rows': 5,
+        'cols': 16
     }
 }
 
 
-def discover(match=None):
+def discover(match=None, use_hid=False):
+    if not use_hid:
+        return old_discover(match=match)
+    return new_discover(match=match)
+
+
+def new_discover(match=None):
+    devs = hid.enumerate()
+    results = []
+
+    results_by_tag = {}
+
+    for d in devs:
+        did = f"{d['vendor_id']:04x}:{d['product_id']:04x}"
+        did_ver = f"{did}:v{d['release_number']:04x}"
+
+        device_info = devices.get(did_ver, devices.get(did))
+
+        if device_info is not None:
+            add = True
+            if match is not None:
+                if match not in device_info['name'] and \
+                   match not in device_info['tag']:
+                    add = False
+
+            if add:
+                if device_info['tag'] not in results_by_tag:
+                    struct = device_info
+                    struct['device'] = [d['path']]
+                    struct['id'] = did
+                    struct['use_hid'] = True
+                    results_by_tag[device_info['tag']] = struct
+                else:
+                    kb = results_by_tag[device_info['tag']]
+                    kb['device'].append(d['path'])
+
+    return list(results_by_tag.values())
+
+
+def old_discover(match=None):
     devs = usb.core.find(find_all=True)
     results = []
 
@@ -73,6 +131,7 @@ def discover(match=None):
                 struct = device_info
                 struct['device'] = device
                 struct['id'] = did
+                struct['use_hid'] = False
 
                 results.append(struct)
 

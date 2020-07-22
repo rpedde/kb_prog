@@ -14,6 +14,7 @@ def get_parser():
     parser = argparse.ArgumentParser(description='keyboard manager')
     parser.add_argument('--match', '-m')
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--hid', action='store_true')
 
     subparsers = parser.add_subparsers(help='action', dest='action')
 
@@ -58,7 +59,7 @@ def main(rawargs):
 
     logging.basicConfig(format=fmt, level=level, datefmt='%Y-%m-%dT%H:%M:%S')
 
-    results = discover.discover(match=args.match)
+    results = discover.discover(match=args.match, use_hid=args.hid)
 
     if len(results) == 0:
         logging.error('no results')
