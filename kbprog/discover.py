@@ -2,6 +2,12 @@ import hid
 import usb.core
 
 devices = {
+    '5241:080a': {
+        'name': 'Rama U80-A',
+        'tag': 'u80a',
+        'rows': 6,
+        'cols': 17
+    },
     '5241:060a': {
         'name': 'Rama M60-A',
         'tag': 'm60a',

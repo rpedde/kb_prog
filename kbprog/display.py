@@ -449,8 +449,8 @@ class ProgramDisplay(object):
         self.action_dirty = True
 
     def on_chooser_key_move(self, pos):
-        col = (pos[0] - self.chooser_key_r.x) // self.x_unit
-        row = (pos[1] - self.chooser_key_r.y) // self.y_unit
+        col = int((pos[0] - self.chooser_key_r.x) // self.x_unit)
+        row = int((pos[1] - self.chooser_key_r.y) // self.y_unit)
 
         keys = chooser_tabs[self.selected_chooser]['keys']
 

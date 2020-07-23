@@ -323,12 +323,7 @@ class Keyboard(object):
         self._send_command(self.BACKLIGHT_CONFIG_SET_VALUE,
                            self.BACKLIGHT_EFFECT, value)
 
-    def _send_command(self, cmd, *args):
-        if self.use_hid:
-            return self._send_hid_command(cmd, *args)
-        return self._send_old_command(cmd, *args)
-
-    def _send_hid_command(self, *args):
+    def _send_command(self, *args):
         bufsize = 32
         out_buf = [0x00] * bufsize
         ofs = 0
@@ -356,10 +351,17 @@ class Keyboard(object):
                           len(out_buf),
                           ' '.join('%02x' % x for x in out_buf))
 
+        if not self.use_hid:
+            result = self.device.write(self.out_ep, out_buf, timeout=1000)
+
         retry_count = 0
         while retry_count <= 1:
-            result = self.hid_device.write(out_buf)
-            in_buf = self.hid_device.read(32, 300)  # 1s timeout
+            if self.use_hid:
+                result = self.hid_device.write(out_buf)
+                in_buf = self.hid_device.read(32, 300)  # 1s timeout
+            else:
+                in_buf = self.device.read(self.in_ep, 32, timeout=1000)
+
             if len(in_buf) != 0:
                 break
             retry_count += 1
@@ -369,32 +371,6 @@ class Keyboard(object):
                           len(in_buf),
                           ' '.join('%02x' % x for x in in_buf))
         return in_buf
-
-    def _send_old_command(self, cmd, *args):
-        bytedata = bytearray([cmd])
-        for arg in args:
-            if isinstance(arg, int):
-                bytedata.append(arg)
-            elif isinstance(arg, bytearray):
-                bytedata += arg
-            elif isinstance(arg, basestring):
-                bytedata += bytearray(arg.encode())
-            else:
-                raise RuntimeError('Bad arg: %s', arg)
-
-        while len(bytedata) < 32:
-            bytedata.append(0x0)
-
-        self.logger.debug('Send: %d bytes: %s',
-                          len(bytedata),
-                          ' '.join('%02x' % x for x in bytedata))
-        self.device.write(self.out_ep, bytedata)
-        result = self.device.read(self.in_ep, 32)
-
-        self.logger.debug('Recv: %s bytes: %s',
-                          len(result),
-                          ' '.join('%02x' % x for x in result))
-        return result
 
     def find_hidpath(self):
         self.logger.info(f'Probing for raw hid device among {self.device}')
