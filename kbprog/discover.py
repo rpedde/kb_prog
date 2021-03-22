@@ -62,11 +62,23 @@ devices = {
         'rows': 5,
         'cols': 15
     },
+    '4250:4d4c': {
+        'name': 'Backprop Studio Doro67',
+        'tag': 'doro',
+        'rows': 5,
+        'cols': 15
+    },
     'feed:6050': {
         'name': 'TX-65',
         'tag': 'tx65',
         'rows': 5,
         'cols': 16
+    },
+    '8968:4e4b': {
+        'name': 'Yiancar-Designs NK65',
+        'tag': 'nk65',
+        'rows': 5,
+        'cols': 15
     }
 }
 

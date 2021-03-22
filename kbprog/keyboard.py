@@ -416,6 +416,7 @@ class Keyboard(object):
 
                 self.logger.info('Using interface %d: in %d/out %d',
                                  self.interface, self.in_ep, self.out_ep)
+                break
 
         if not self.interface:
             raise RuntimeError('No good interface found')
