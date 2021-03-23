@@ -365,7 +365,7 @@ class Keyboard(object):
             if len(in_buf) != 0:
                 break
             retry_count += 1
-            self.logger.info('Bad read... retrying...')
+            # self.logger.info(f'Bad read: {len(in_buf)} bytes... retrying...')
 
         self.logger.debug('Recv: %s bytes: %s',
                           len(in_buf),

@@ -42,6 +42,7 @@ class Keymapper(object):
                 'missing/invalid layout.  '
                 'valid layouts: %s' % ', '.join(wirings.keys()))
 
+        self.layout_name = layout
         self.wiring = wirings[layout]
 
         layout_file = os.path.join(
@@ -121,6 +122,77 @@ class Keymapper(object):
 
         self.dirtymap = {}
 
+    def restore(self, input_file):
+        with open(input_file, 'r') as f:
+            lines = f.read().split('\n')
+
+        layout = lines[0]
+        lines = lines[1:]
+
+        if layout != self.layout_name:
+            # there might be some kind of conversion that could
+            # be attempted
+            raise RuntimeError(
+                f'This layout is for {layout}, not {self.layout_name}')
+
+        lines = [line.strip()
+                 for line in lines
+                 if line.strip() != '' and line[0] != '#']
+
+        if len(lines) != len(self.wiring) * self.layers:
+            raise RuntimeError(f'Wrong number of rows/layers')
+
+        layer = 0
+        row = 0
+        keypos = 0
+        for line in lines:
+            keycodes = [int(x.strip()) for x in line.split(',')]
+            for col, keycode in enumerate(keycodes):
+                map_row, map_col = self.wiring[row][col]
+                old_keycode = self.map[layer][map_row][map_col]
+                if keycode != old_keycode:
+                    idx = f'{layer}:{map_row}:{map_col}'
+                    self.dirtymap[idx] = keycode
+                    old_key = keys.bytes_to_key.get(old_keycode, old_keycode)
+                    new_key = keys.bytes_to_key.get(keycode, keycode)
+                    keylabel = self.keylist[keypos].get('label', 'unknown')
+
+                    self.logger.info(f'{idx} ({keylabel}) was {old_key}, updating to {new_key}')
+                keypos += 1
+
+            row += 1
+            if row >= len(self.wiring):
+                layer += 1
+                row = 0
+                keypos = 0
+
+        assert row == 0
+        assert layer == self.layers
+
+        print(f'{len(self.dirtymap)} items changed')
+
+
+    def backup(self, output_file):
+        with open(output_file, 'w') as f:
+            f.write(f'{self.layout_name}\n')
+            for layer in range(self.layers):
+                f.write(f'#\n# LAYER {layer}\n#\n')
+
+                for row in self.wiring:
+                    label_vals = []
+                    key_vals = []
+
+                    for col in row:
+                        row_idx, col_idx = col
+                        key = self.map[layer][row_idx][col_idx]
+                        key_vals.append(key)
+                        label_vals.append(keys.label_for_keycode(key))
+
+                    f.write('# ' + ', '.join(
+                        f'{l:>7}' for l in label_vals) + '\n')
+                    f.write('  ' + ', '.join(
+                        f'{str(k):>7}' for k in key_vals) + '\n')
+
     def is_dirty(self, layer, keyinfo):
         row, col = keyinfo['wiremap']
         idx = '%s:%s:%s' % (layer, row, col)
@@ -133,7 +205,6 @@ class Keymapper(object):
     def set_key(self, layer, keyinfo, newcode):
         row, col = keyinfo['wiremap']
         idx = '%s:%s:%s' % (layer, row, col)
-
         self.dirtymap[idx] = keys.key_to_bytes[newcode]
 
     def label_for_key(self, layer, keyinfo):

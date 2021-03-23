@@ -39,6 +39,16 @@ def get_parser():
     macro_parser.add_argument('index', type=int)
     macro_parser.add_argument('value')
 
+    backup_parser = subparsers.add_parser('backup', help='backup key map')
+    backup_parser.add_argument('file')
+    backup_parser.add_argument('--layout', help='key layout format')
+
+
+    restore_parser = subparsers.add_parser('restore', help='restore key map')
+    restore_parser.add_argument('file')
+    restore_parser.add_argument('--layout', help='key layout format')
+    restore_parser.add_argument('--dry-run', action='store_true')
+
     # save_parser = led_subparsers.add_parser('save', help='save')
 
     return parser
@@ -106,6 +116,21 @@ def main(rawargs):
                 logging.info('%s', pretty)
 
         print(json.dumps(kmap, indent=2))
+    elif args.action == 'backup':
+        keymapper = Keymapper(kb, layout=args.layout)
+        logging.info('getting keyboard map')
+
+        keymapper.get_map()
+        keymapper.backup(args.file)
+
+    elif args.action == 'restore':
+        keymapper = Keymapper(kb, layout=args.layout)
+        logging.info('loading existing map')
+        keymapper.get_map()
+        keymapper.restore(args.file)
+        if not args.dry_run:
+            keymapper.program()
+
     elif args.action == 'led':
         if args.subaction == 'effect':
             current_effect = kb.effect
