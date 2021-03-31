@@ -28,7 +28,11 @@ class Keymapper(object):
                 'Unknown wiring for %s' % keyboard.tag)
 
         with open(wiring_file, 'r') as f:
-            wiring = json.loads(f.read())
+            try:
+                wiring = json.loads(f.read())
+            except Exception:
+                print(f'Error loading {wiring_file}')
+                raise
 
         wirings = wiring['layouts']
 

@@ -79,6 +79,18 @@ devices = {
         'tag': 'nk65',
         'rows': 5,
         'cols': 15
+    },
+    '4d4c:4b4e': {
+        'name': 'MechLovin\' Kanu',
+        'tag': 'kanu',
+        'rows': 5,
+        'cols': 15
+    },
+    '20a0:422d': {
+        'name': 'Mehkee 96KEE',
+        'tag': '96kee',
+        'rows': 8,
+        'cols': 15
     }
 }
 
