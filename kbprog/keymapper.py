@@ -60,6 +60,7 @@ class Keymapper(object):
 
         max_x = 0
         ypos = 0
+        rownum = 0
 
         for row in self.layout:
             xpos = 0
@@ -73,6 +74,8 @@ class Keymapper(object):
                         next_w = item['w']
                     if 'x' in item:
                         xpos += item['x']
+                    if 'y' in item:
+                        ypos += item['y']
                     if 'h' in item:
                         next_h = item['h']
                 else:
@@ -88,7 +91,7 @@ class Keymapper(object):
 
                     keyinfo = {'x': xpos,
                                'y': ypos,
-                               'wiremap': self.wiring[ypos][col],
+                               'wiremap': self.wiring[rownum][col],
                                'label': self.label_for(label),
                                'shift_label': self.label_for(shift_label),
                                'w': w,
@@ -106,8 +109,8 @@ class Keymapper(object):
                     col += 1
 
             ypos += 1
+            rownum += 1
 
-        self.cols = ypos
         self.max_x = max_x
         self.max_y = ypos
 

@@ -91,6 +91,24 @@ devices = {
         'tag': '96kee',
         'rows': 8,
         'cols': 15
+    },
+    'feed:6060': {
+        'name': 'Sentraq S60-X-RGB',
+        'tag': 's60rgb',
+        'rows': 5,
+        'cols': 15
+    },
+    '5a45:0060': {
+        'name': 'ZealPC Zeal60',
+        'tag': 'zeal60',
+        'rows': 5,
+        'cols': 14
+    },
+    '320f:5044': {
+        'name': 'Glorious GMMK Pro',
+        'tag': 'gmmkpro',
+        'rows': 11,
+        'cols': 8
     }
 }
 

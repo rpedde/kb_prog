@@ -46,6 +46,9 @@ def get_kb_info(kb_root, extra_maps=None, skips=None):
     if conf['product_id'].startswith('0x'):
         conf['product_id'] = conf['product_id'][2:]
 
+    conf['vendor_id'] = conf['vendor_id'].lower()
+    conf['product_id'] = conf['product_id'].lower()
+
     discover_entry = {
         'name': '{manufacturer} {product}'.format(**conf),
         'tag': conf['product'].lower(),
@@ -84,12 +87,10 @@ def get_kb_info(kb_root, extra_maps=None, skips=None):
                     if kcno:
                         kc_no_aliases.append(kcno[1].strip())
 
-
     layouts = {}
     print(f'attempting decode of {len(all_defines)} layouts')
 
-    matrix_size = discover_entry['rows'] * discover_entry['cols']
-
+    # matrix_size = discover_entry['rows'] * discover_entry['cols']
     for layout in all_defines:
         result = re.match('^\s*#define\s+([^\(]+)\((.*)\)(.*)$', layout)
         if not result:
@@ -173,9 +174,10 @@ def get_kb_info(kb_root, extra_maps=None, skips=None):
                     pos += 1
                 this_layout.append(this_row)
 
-            layouts[layout_name] = this_layout
+            layouts[layout_name.replace('.json', '')] = this_layout
 
     return discover_entry, layouts
+
 
 def main():
     args = get_parser().parse_args()
@@ -196,7 +198,7 @@ def main():
 
         print(f'wrote wiring to {args.wiring_path}')
     else:
-        print(json.dumps(wiring))
+        print(json.dumps({"layouts": wiring}))
 
 
 if __name__ == '__main__':
